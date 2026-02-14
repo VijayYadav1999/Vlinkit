@@ -16,6 +16,7 @@ export class LocationService implements OnModuleInit, OnModuleDestroy {
       host: this.configService.get('REDIS_HOST', 'localhost'),
       port: this.configService.get<number>('REDIS_PORT', 6379),
       password: this.configService.get('REDIS_PASSWORD', '') || undefined,
+      tls: this.configService.get('REDIS_HOST', 'localhost').includes('upstash') ? {} : undefined,
     });
   }
 
