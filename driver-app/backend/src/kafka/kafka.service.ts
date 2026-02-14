@@ -20,11 +20,24 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     const brokers = this.configService.get('KAFKA_BROKERS', 'localhost:9092').split(',');
 
-    this.kafka = new Kafka({
+    const kafkaConfig: any = {
       clientId: 'driver-service',
       brokers,
       retry: { retries: 5 },
-    });
+    };
+
+    const saslUsername = this.configService.get('KAFKA_SASL_USERNAME');
+    const saslPassword = this.configService.get('KAFKA_SASL_PASSWORD');
+    if (saslUsername && saslPassword) {
+      kafkaConfig.ssl = true;
+      kafkaConfig.sasl = {
+        mechanism: this.configService.get('KAFKA_SASL_MECHANISM', 'plain'),
+        username: saslUsername,
+        password: saslPassword,
+      };
+    }
+
+    this.kafka = new Kafka(kafkaConfig);
 
     this.producer = this.kafka.producer();
     this.consumer = this.kafka.consumer({ groupId: 'driver-service-group' });

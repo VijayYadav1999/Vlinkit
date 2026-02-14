@@ -9,10 +9,23 @@ export class KafkaConsumerService implements OnModuleInit {
   private handlers: Map<string, (message: any) => Promise<void>> = new Map();
 
   constructor(private configService: ConfigService) {
-    this.kafka = new Kafka({
+    const kafkaConfig: any = {
       clientId: configService.get('KAFKA_CLIENT_ID', 'order-service'),
       brokers: (configService.get('KAFKA_BROKERS', 'localhost:9092')).split(','),
-    });
+    };
+
+    const saslUsername = configService.get('KAFKA_SASL_USERNAME');
+    const saslPassword = configService.get('KAFKA_SASL_PASSWORD');
+    if (saslUsername && saslPassword) {
+      kafkaConfig.ssl = true;
+      kafkaConfig.sasl = {
+        mechanism: configService.get('KAFKA_SASL_MECHANISM', 'plain'),
+        username: saslUsername,
+        password: saslPassword,
+      };
+    }
+
+    this.kafka = new Kafka(kafkaConfig);
     this.consumer = this.kafka.consumer({
       groupId: configService.get('KAFKA_GROUP_ID', 'order-service-group'),
     });
