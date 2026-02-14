@@ -8,12 +8,17 @@ import dotenv from 'dotenv';
 
 dotenv.config(); // loads .env from current directory
 
-const PORT = parseInt(process.env.WS_PORT || '3100');
+const PORT = parseInt(process.env.WS_PORT || process.env.PORT || '3100');
 const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret';
+const REDIS_URL = process.env.REDIS_URL || '';
 const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
 const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379');
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD || '';
 const KAFKA_BROKERS = (process.env.KAFKA_BROKERS || 'localhost:9092').split(',');
+const KAFKA_SASL_USERNAME = process.env.KAFKA_SASL_USERNAME || '';
+const KAFKA_SASL_PASSWORD = process.env.KAFKA_SASL_PASSWORD || '';
+const KAFKA_SASL_MECHANISM = process.env.KAFKA_SASL_MECHANISM || 'plain';
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // ─── HTTP + Socket.IO Server ─────────────────────────────────────
 const httpServer = createServer((req, res) => {
@@ -28,7 +33,7 @@ const httpServer = createServer((req, res) => {
 
 const io = new Server(httpServer, {
   cors: {
-    origin: ['http://localhost:4200', 'http://localhost:4201'],
+    origin: (process.env.CORS_ORIGINS || 'http://localhost:4200,http://localhost:4201').split(','),
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -38,15 +43,29 @@ const io = new Server(httpServer, {
 
 // ─── Redis Adapter for horizontal scaling ────────────────────────
 async function setupRedisAdapter() {
-  const pubClient = new Redis({
-    host: REDIS_HOST,
-    port: REDIS_PORT,
-    password: REDIS_PASSWORD || undefined,
-  });
+  let pubClient: Redis;
+
+  if (REDIS_URL) {
+    // Use REDIS_URL (Upstash / cloud Redis with TLS)
+    pubClient = new Redis(REDIS_URL, {
+      tls: REDIS_URL.startsWith('rediss://') ? {} : undefined,
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times) => Math.min(times * 200, 3000),
+    });
+  } else {
+    pubClient = new Redis({
+      host: REDIS_HOST,
+      port: REDIS_PORT,
+      password: REDIS_PASSWORD || undefined,
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times) => Math.min(times * 200, 3000),
+    });
+  }
+
   const subClient = pubClient.duplicate();
 
-  pubClient.on('error', (err) => console.error('Redis pub error:', err));
-  subClient.on('error', (err) => console.error('Redis sub error:', err));
+  pubClient.on('error', (err) => console.error('Redis pub error:', err.message));
+  subClient.on('error', (err) => console.error('Redis sub error:', err.message));
 
   io.adapter(createAdapter(pubClient, subClient) as any);
   console.log('✓ Redis adapter connected');
@@ -184,11 +203,23 @@ notificationNs.on('connection', (socket) => {
 // ─── Kafka Consumer Bridge ───────────────────────────────────────
 // Bridges Kafka events to WebSocket clients
 async function setupKafkaConsumer() {
-  const kafka = new Kafka({
+  const kafkaConfig: any = {
     clientId: 'websocket-server',
     brokers: KAFKA_BROKERS,
     retry: { retries: 5 },
-  });
+  };
+
+  // Add SASL/SSL for Confluent Cloud
+  if (KAFKA_SASL_USERNAME && KAFKA_SASL_PASSWORD) {
+    kafkaConfig.ssl = true;
+    kafkaConfig.sasl = {
+      mechanism: KAFKA_SASL_MECHANISM,
+      username: KAFKA_SASL_USERNAME,
+      password: KAFKA_SASL_PASSWORD,
+    };
+  }
+
+  const kafka = new Kafka(kafkaConfig);
 
   const consumer: Consumer = kafka.consumer({ groupId: 'websocket-bridge-group' });
   await consumer.connect();
