@@ -8,6 +8,7 @@ import { OrdersModule } from './orders/orders.module';
 import { LocationModule } from './location/location.module';
 import { FleetEngineModule } from './fleet-engine/fleet-engine.module';
 import { KafkaModule } from './kafka/kafka.module';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -40,5 +41,6 @@ import { KafkaModule } from './kafka/kafka.module';
     FleetEngineModule,
     KafkaModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}

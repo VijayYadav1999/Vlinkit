@@ -6,6 +6,7 @@ import { CartModule } from './cart/cart.module';
 import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { KafkaModule } from './kafka/kafka.module';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -26,5 +27,6 @@ import { KafkaModule } from './kafka/kafka.module';
     PaymentsModule,
     KafkaModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}
