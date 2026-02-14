@@ -33,7 +33,7 @@ const httpServer = createServer((req, res) => {
 
 const io = new Server(httpServer, {
   cors: {
-    origin: (process.env.CORS_ORIGINS || 'http://localhost:4200,http://localhost:4201').split(','),
+    origin: (process.env.CORS_ORIGINS || 'https://vlinkit-user-app.vercel.app,https://vlinkit-driver-app.vercel.app').split(','),
     methods: ['GET', 'POST'],
     credentials: true,
   },
