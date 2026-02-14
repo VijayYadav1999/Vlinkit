@@ -22,9 +22,9 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // ─── HTTP + Socket.IO Server ─────────────────────────────────────
 const httpServer = createServer((req, res) => {
-  if (req.url === '/health') {
+  if (req.url === '/health' || req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok', connections: io.engine.clientsCount }));
+    res.end(JSON.stringify({ status: 'ok', service: 'vlinkit-websocket', connections: io.engine.clientsCount }));
     return;
   }
   res.writeHead(404);
