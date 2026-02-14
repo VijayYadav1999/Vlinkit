@@ -27,6 +27,9 @@ import { KafkaModule } from './kafka/kafka.module';
         database: config.get('DATABASE_NAME', 'vlinkit_db'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: config.get('DATABASE_SYNCHRONIZE', 'true') === 'true',
+        extra: {
+          family: 4,
+        },
       }),
     }),
     ScheduleModule.forRoot(),

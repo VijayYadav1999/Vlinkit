@@ -23,6 +23,9 @@ import { UsersModule } from './users/users.module';
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: config.get('DATABASE_SYNCHRONIZE', 'true') === 'true',
         logging: config.get('DATABASE_LOGGING', 'false') === 'true',
+        extra: {
+          family: 4,
+        },
       }),
     }),
     AuthModule,
