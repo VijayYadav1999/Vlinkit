@@ -1,0 +1,427 @@
+<div class="checkout-container">
+  <!-- Header -->
+  <div class="checkout-header">
+    <h1>Checkout</h1>
+    <p class="checkout-subtitle">Complete your order in 3 easy steps</p>
+  </div>
+
+  <!-- Error Alert -->
+  <div *ngIf="error" class="alert alert-danger" role="alert">
+    {{ error }}
+  </div>
+
+  <!-- Success Message -->
+  <div *ngIf="successMessage" class="alert alert-success" role="alert">
+    {{ successMessage }}
+  </div>
+
+  <!-- Progress Indicator -->
+  <div class="progress-indicator">
+    <div class="step" [ngClass]="'step-' + getStepStatus(1)">
+      <div class="step-number">1</div>
+      <div class="step-label">Delivery Address</div>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step" [ngClass]="'step-' + getStepStatus(2)">
+      <div class="step-number">2</div>
+      <div class="step-label">Payment Method</div>
+    </div>
+    <div class="step-connector"></div>
+    <div class="step" [ngClass]="'step-' + getStepStatus(3)">
+      <div class="step-number">3</div>
+      <div class="step-label">Review & Confirm</div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="checkout-content">
+    <!-- Left Side - Main Form -->
+    <div class="checkout-main">
+      <!-- Step 1: Address Selection -->
+      <div class="step-panel" *ngIf="currentStep === 1">
+        <h2 class="step-title">Select Delivery Address</h2>
+
+        <!-- Existing Addresses -->
+        <div class="addresses-list">
+          <div
+            *ngFor="let addr of addresses"
+            class="address-card"
+            [class.selected]="selectedAddress?.id === addr.id"
+            (click)="selectAddress(addr)"
+          >
+            <input
+              type="radio"
+              [checked]="selectedAddress?.id === addr.id"
+              [name]="'address_' + addr.id"
+              class="address-radio"
+            />
+            <div class="address-content">
+              <div class="address-type">
+                <span class="address-label">{{ addr.type }}</span>
+                <span *ngIf="addr.isDefault" class="default-badge">Default</span>
+              </div>
+              <div class="address-name">{{ addr.name }}</div>
+              <div class="address-details">
+                {{ addr.street }}, {{ addr.city }}, {{ addr.state }} {{ addr.zipCode }}
+              </div>
+              <div class="address-phone">📞 {{ addr.phone }}</div>
+              <div *ngIf="addr.landmark" class="address-landmark">
+                📍 {{ addr.landmark }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add New Address Button -->
+        <button
+          class="btn btn-secondary btn-add-address"
+          (click)="addNewAddress()"
+          *ngIf="!isEditing"
+        >
+          + Add New Address
+        </button>
+
+        <!-- Add New Address Form -->
+        <div class="address-form" *ngIf="isEditing">
+          <h3>Add New Address</h3>
+          <form [formGroup]="addressForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Address Type</label>
+                <select formControlName="type" class="form-control">
+                  <option value="HOME">Home</option>
+                  <option value="WORK">Work</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Name</label>
+                <input
+                  type="text"
+                  formControlName="name"
+                  class="form-control"
+                  placeholder="e.g., Home, Office"
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Phone Number</label>
+                <input
+                  type="text"
+                  formControlName="phone"
+                  class="form-control"
+                  placeholder="10-digit mobile number"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Street Address</label>
+              <input
+                type="text"
+                formControlName="street"
+                class="form-control"
+                placeholder="Flat No, Building Name, Street"
+              />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>City</label>
+                <input
+                  type="text"
+                  formControlName="city"
+                  class="form-control"
+                  placeholder="City"
+                />
+              </div>
+              <div class="form-group">
+                <label>State</label>
+                <input
+                  type="text"
+                  formControlName="state"
+                  class="form-control"
+                  placeholder="State"
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Zip Code</label>
+                <input
+                  type="text"
+                  formControlName="zipCode"
+                  class="form-control"
+                  placeholder="6-digit zip code"
+                />
+              </div>
+              <div class="form-group">
+                <label>Landmark (Optional)</label>
+                <input
+                  type="text"
+                  formControlName="landmark"
+                  class="form-control"
+                  placeholder="Near XYZ"
+                />
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn btn-primary"
+                (click)="saveAddress()"
+              >
+                Save Address
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                (click)="cancelAddressEdit()"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Step 2: Payment Method -->
+      <div class="step-panel" *ngIf="currentStep === 2">
+        <h2 class="step-title">Select Payment Method</h2>
+
+        <div class="payment-methods">
+          <div
+            *ngFor="let method of paymentMethods"
+            class="payment-card"
+            [class.selected]="selectedPaymentMethod?.id === method.id"
+            (click)="selectPaymentMethod(method)"
+          >
+            <div class="payment-icon">
+              <span *ngIf="method.type === 'CREDIT_CARD'">💳</span>
+              <span *ngIf="method.type === 'DEBIT_CARD'">🏧</span>
+              <span *ngIf="method.type === 'UPI'">📱</span>
+              <span *ngIf="method.type === 'WALLET'">👛</span>
+              <span *ngIf="method.type === 'NET_BANKING'">🏦</span>
+            </div>
+            <div class="payment-details">
+              <div class="payment-type">{{ method.type.split('_').join(' ') }}</div>
+              <div class="payment-name">{{ method.name }}</div>
+              <div *ngIf="method.lastUsed" class="payment-lastused">
+                Last used: {{ method.lastUsed | date: 'short' }}
+              </div>
+            </div>
+            <input
+              type="radio"
+              [checked]="selectedPaymentMethod?.id === method.id"
+              [name]="'payment_' + method.id"
+              class="payment-radio"
+            />
+            <span *ngIf="method.isDefault" class="default-badge">Default</span>
+          </div>
+        </div>
+
+        <!-- Delivery Type Selection -->
+        <div class="delivery-selection">
+          <h3>Choose Delivery Type</h3>
+          <div class="delivery-options">
+            <div
+              *ngFor="let delivery of deliveryTypes"
+              class="delivery-option"
+              [class.selected]="selectedDeliveryType === delivery.id"
+              (click)="selectDeliveryType(delivery.id)"
+            >
+              <input
+                type="radio"
+                [value]="delivery.id"
+                [checked]="selectedDeliveryType === delivery.id"
+                [name]="'delivery_' + delivery.id"
+              />
+              <div class="delivery-info">
+                <div class="delivery-label">{{ delivery.label }}</div>
+                <div class="delivery-price" *ngIf="delivery.price > 0">
+                  ₹{{ delivery.price }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scheduled Delivery Date/Time (if selected) -->
+        <div class="scheduled-delivery" *ngIf="selectedDeliveryType === 'SCHEDULED'">
+          <h3>Scheduled Delivery</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Delivery Date</label>
+              <input
+                type="date"
+                class="form-control"
+                [min]="minDeliveryDate | date: 'yyyy-MM-dd'"
+                [max]="maxDeliveryDate | date: 'yyyy-MM-dd'"
+                [value]="selectedDeliveryDate | date: 'yyyy-MM-dd'"
+                (change)="setDeliveryDate($event.target.valueAsDate)"
+              />
+            </div>
+            <div class="form-group">
+              <label>Preferred Slot</label>
+              <select class="form-control" (change)="setDeliveryTime($event.target.value)">
+                <option value="09:00-14:00">09:00 AM - 02:00 PM</option>
+                <option value="14:00-18:00">02:00 PM - 06:00 PM</option>
+                <option value="18:00-22:00">06:00 PM - 10:00 PM</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Review & Confirm -->
+      <div class="step-panel" *ngIf="currentStep === 3">
+        <h2 class="step-title">Review Your Order</h2>
+
+        <!-- Selected Address Summary -->
+        <div class="summary-section">
+          <h3>Delivery Address</h3>
+          <div class="summary-card">
+            <div class="summary-item">
+              <span class="summary-label">{{ selectedAddress?.type }}</span>
+              <span class="summary-value">{{ selectedAddress?.name }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-value">{{ selectedAddress?.street }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-value">
+                {{ selectedAddress?.city }}, {{ selectedAddress?.state }}
+                {{ selectedAddress?.zipCode }}
+              </span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Phone</span>
+              <span class="summary-value">{{ selectedAddress?.phone }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Method Summary -->
+        <div class="summary-section">
+          <h3>Payment Method</h3>
+          <div class="summary-card">
+            <div class="summary-item">
+              <span class="summary-label">{{ selectedPaymentMethod?.type?.split('_').join(' ') }}</span>
+              <span class="summary-value">{{ selectedPaymentMethod?.name }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delivery Type Summary -->
+        <div class="summary-section">
+          <h3>Delivery Type</h3>
+          <div class="summary-card">
+            <div class="summary-item">
+              <span class="summary-value">{{ getDeliveryTypeName(selectedDeliveryType) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Terms -->
+        <div class="terms-section">
+          <label class="checkbox-label">
+            <input type="checkbox" required />
+            I agree to the Terms and Conditions
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" required />
+            I understand the cancellation and refund policy
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Side - Order Summary -->
+    <div class="checkout-sidebar">
+      <div class="order-summary-card">
+        <h3>Order Summary</h3>
+
+        <div class="summary-row">
+          <span>Items ({{ orderSummary.itemCount }})</span>
+          <span>₹{{ orderSummary.subtotal | number: '1.2-2' }}</span>
+        </div>
+
+        <div class="summary-row">
+          <span>Tax</span>
+          <span>₹{{ orderSummary.tax | number: '1.2-2' }}</span>
+        </div>
+
+        <div class="summary-row">
+          <span>Delivery Fee</span>
+          <span>₹{{ orderSummary.deliveryFee | number: '1.2-2' }}</span>
+        </div>
+
+        <div class="summary-row discount" *ngIf="orderSummary.discount > 0">
+          <span>Discount</span>
+          <span>-₹{{ orderSummary.discount | number: '1.2-2' }}</span>
+        </div>
+
+        <div class="summary-divider"></div>
+
+        <div class="summary-row total">
+          <span>Total Amount</span>
+          <span>₹{{ orderSummary.totalAmount | number: '1.2-2' }}</span>
+        </div>
+
+        <div class="savings-info" *ngIf="orderSummary.discount > 0">
+          <span>🎉 You save ₹{{ orderSummary.discount | number: '1.2-2' }}!</span>
+        </div>
+      </div>
+
+      <!-- Estimated Delivery -->
+      <div class="delivery-info-card">
+        <h3>Estimated Delivery</h3>
+        <div class="delivery-date">
+          {{ orderSummary.estimatedDeliveryDate }}
+        </div>
+        <p class="delivery-text">Free returns within 7 days</p>
+      </div>
+
+      <!-- Step Navigation Buttons -->
+      <div class="action-buttons">
+        <button
+          *ngIf="currentStep > 1"
+          class="btn btn-secondary btn-block"
+          (click)="previousStep()"
+          [disabled]="isProcessing"
+        >
+          ← Previous Step
+        </button>
+
+        <button
+          *ngIf="currentStep < 3"
+          class="btn btn-primary btn-block"
+          (click)="nextStep()"
+          [disabled]="isProcessing || !canProceedToCheckout()"
+        >
+          Continue →
+        </button>
+
+        <button
+          *ngIf="currentStep === 3"
+          class="btn btn-success btn-block btn-large"
+          (click)="proceedToPaymentGateway()"
+          [disabled]="isProcessing"
+        >
+          <span *ngIf="isProcessing" class="spinner-small"></span>
+          {{ isProcessing ? 'Processing...' : 'Place Order' }}
+        </button>
+      </div>
+
+      <!-- Security Badge -->
+      <div class="security-badge">
+        <span class="lock-icon">🔒</span>
+        <span>Secure Checkout</span>
+      </div>
+    </div>
+  </div>
+</div>

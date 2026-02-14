@@ -1,0 +1,44 @@
+<!-- Navbar - Always visible -->
+<nav class="navbar">
+  <div class="navbar-brand" (click)="navigateTo('/products')">
+    <span class="logo">🚀</span>
+    <span class="brand-name">Vlinkit</span>
+  </div>
+  <div class="navbar-links">
+    <a routerLink="/products" routerLinkActive="active">Products</a>
+    <a routerLink="/cart" routerLinkActive="active" class="cart-link">
+      🛒 Cart
+      <span class="cart-badge" *ngIf="(cartItemCount$ | async) as count">
+        {{ count }}
+      </span>
+    </a>
+    <a routerLink="/orders/track" routerLinkActive="active" *ngIf="isLoggedIn">📦 Orders</a>
+  </div>
+  <div class="navbar-actions">
+    <!-- Logged in -->
+    <ng-container *ngIf="isLoggedIn">
+      <span class="user-name" *ngIf="currentUser">{{ currentUser.firstName }}</span>
+      <button class="btn-logout" (click)="logout()">Logout</button>
+    </ng-container>
+    <!-- Not logged in -->
+    <ng-container *ngIf="!isLoggedIn">
+      <a routerLink="/login" class="btn-auth">Sign In</a>
+    </ng-container>
+  </div>
+</nav>
+
+<!-- Toast Notifications -->
+<div class="toast-container">
+  <div
+    *ngFor="let notification of (notificationService.getNotifications() | async)"
+    class="toast"
+    [ngClass]="notification.type"
+    (click)="dismissNotification(notification.id)">
+    {{ notification.message }}
+  </div>
+</div>
+
+<!-- Router outlet -->
+<main class="with-navbar">
+  <router-outlet></router-outlet>
+</main>

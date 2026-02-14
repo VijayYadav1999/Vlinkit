@@ -1,0 +1,285 @@
+version: '3.8'
+
+services:
+  # Frontend - Angular Application
+  frontend:
+    build:
+      context: ./user-app/frontend
+      dockerfile: Dockerfile
+    container_name: vlinkit-frontend
+    ports:
+      - "4200:4200"
+    environment:
+      - NODE_ENV=development
+      - API_BASE_URL=/api/user
+      - WEBSOCKET_URL=ws://localhost:3100
+    volumes:
+      - ./user-app/frontend/src:/app/src
+    depends_on:
+      - user-api
+    networks:
+      - vlinkit-network
+
+  # Driver App Frontend
+  driver-frontend:
+    build:
+      context: ./driver-app/frontend
+      dockerfile: Dockerfile
+    container_name: vlinkit-driver-frontend
+    ports:
+      - "4201:4201"
+    environment:
+      - NODE_ENV=development
+      - API_BASE_URL=/api
+      - WEBSOCKET_URL=ws://localhost:3100
+    volumes:
+      - ./driver-app/frontend/src:/app/src
+    depends_on:
+      - driver-api
+    networks:
+      - vlinkit-network
+
+  # Backend - User Service
+  user-api:
+    build:
+      context: ./user-app/user-service
+      dockerfile: Dockerfile
+    container_name: vlinkit-user-api
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - APP_PORT=3000
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=vlinkit_user
+      - DATABASE_PASSWORD=vlinkit_password_dev
+      - DATABASE_NAME=vlinkit_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BROKERS=kafka:29092
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    networks:
+      - vlinkit-network
+    volumes:
+      - ./user-app/user-service/src:/app/src
+
+  # Backend - Order Service
+  order-api:
+    build:
+      context: ./user-app/order-service
+      dockerfile: Dockerfile
+    container_name: vlinkit-order-api
+    ports:
+      - "3002:3000"
+    environment:
+      - NODE_ENV=development
+      - APP_PORT=3000
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=vlinkit_user
+      - DATABASE_PASSWORD=vlinkit_password_dev
+      - DATABASE_NAME=vlinkit_db
+      - MONGODB_URI=mongodb://mongodb:27017/vlinkit
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BROKERS=kafka:29092
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+    depends_on:
+      - postgres
+      - mongodb
+      - redis
+      - kafka
+    networks:
+      - vlinkit-network
+    volumes:
+      - ./user-app/order-service/src:/app/src
+
+  # Backend - Driver Service
+  driver-api:
+    build:
+      context: ./driver-app/backend
+      dockerfile: Dockerfile
+    container_name: vlinkit-driver-api
+    ports:
+      - "3003:3000"
+    environment:
+      - NODE_ENV=development
+      - APP_PORT=3000
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=vlinkit_user
+      - DATABASE_PASSWORD=vlinkit_password_dev
+      - DATABASE_NAME=vlinkit_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BROKERS=kafka:29092
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    networks:
+      - vlinkit-network
+    volumes:
+      - ./driver-app/backend/src:/app/src
+
+  # WebSocket Tracking Server
+  tracking-server:
+    build:
+      context: ./backend-services/websocket-server
+      dockerfile: Dockerfile
+    container_name: vlinkit-tracking-server
+    ports:
+      - "3100:3100"
+    environment:
+      - NODE_ENV=development
+      - PORT=3100
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BROKERS=kafka:29092
+    depends_on:
+      - redis
+      - kafka
+    networks:
+      - vlinkit-network
+    volumes:
+      - ./backend-services/websocket-server/src:/app/src
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: vlinkit-postgres
+    environment:
+      POSTGRES_USER: vlinkit_user
+      POSTGRES_PASSWORD: vlinkit_password_dev
+      POSTGRES_DB: vlinkit_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend-services/shared/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - vlinkit-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vlinkit_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MongoDB
+  mongodb:
+    image: mongo:6.0
+    container_name: vlinkit-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin_password
+      MONGO_INITDB_DATABASE: vlinkit
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./backend-services/shared/mongo-init.js:/docker-entrypoint-initdb.d/init.js
+    networks:
+      - vlinkit-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test -u admin -p admin_password
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: vlinkit-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - vlinkit-network
+    command: redis-server --appendonly yes --requirepass ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Kafka Message Queue
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.1
+    container_name: vlinkit-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - vlinkit-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.1
+    container_name: vlinkit-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    networks:
+      - vlinkit-network
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "kafka:9092", "--list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Kafka UI (optional, for monitoring)
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: vlinkit-kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: vlinkit
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    depends_on:
+      - kafka
+    networks:
+      - vlinkit-network
+
+  # pgAdmin (optional, for database management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: vlinkit-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - postgres
+    networks:
+      - vlinkit-network
+
+networks:
+  vlinkit-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  redis_data:

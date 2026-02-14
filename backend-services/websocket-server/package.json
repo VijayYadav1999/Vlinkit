@@ -1,0 +1,25 @@
+{
+  "name": "vlinkit-websocket-server",
+  "version": "1.0.0",
+  "description": "Real-time WebSocket server for Vlinkit delivery tracking",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "ts-node src/server.ts"
+  },
+  "dependencies": {
+    "socket.io": "^4.7.2",
+    "@socket.io/redis-adapter": "^8.2.1",
+    "kafkajs": "^2.2.4",
+    "ioredis": "^5.3.2",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/jsonwebtoken": "^9.0.5",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2"
+  }
+}

@@ -1,0 +1,100 @@
+<!-- User App - Login Component Template -->
+<!-- File: user-app/frontend/src/app/modules/auth/components/login/login.component.html -->
+
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <h1>Vlinkit</h1>
+      <p>Fast & Fresh Delivery</p>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      <!-- Error Alert -->
+      <div *ngIf="error" class="alert alert-danger" role="alert">
+        <i class="icon-alert"></i>
+        {{ error }}
+      </div>
+
+      <!-- Email Field -->
+      <div class="form-group">
+        <label for="email" class="form-label">Email Address</label>
+        <div class="input-wrapper">
+          <input
+            type="email"
+            id="email"
+            class="form-control"
+            formControlName="email"
+            placeholder="Enter your email"
+            [class.is-invalid]="emailControl?.invalid && emailControl?.touched" />
+          <i class="icon-email"></i>
+        </div>
+        <small class="text-danger" *ngIf="emailControl?.touched && emailControl?.invalid">
+          {{ getEmailError() }}
+        </small>
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-group">
+        <label for="password" class="form-label">Password</label>
+        <div class="input-wrapper">
+          <input
+            [type]="showPassword ? 'text' : 'password'"
+            id="password"
+            class="form-control"
+            formControlName="password"
+            placeholder="Enter your password"
+            [class.is-invalid]="passwordControl?.invalid && passwordControl?.touched" />
+          <button
+            type="button"
+            class="toggle-password"
+            (click)="togglePasswordVisibility()"
+            tabindex="-1">
+            <i [class]="showPassword ? 'icon-eye-off' : 'icon-eye'"></i>
+          </button>
+        </div>
+        <small class="text-danger" *ngIf="passwordControl?.touched && passwordControl?.invalid">
+          {{ getPasswordError() }}
+        </small>
+      </div>
+
+      <!-- Remember Me & Forgot Password -->
+      <div class="form-actions">
+        <div class="form-check">
+          <input
+            type="checkbox"
+            id="remember"
+            class="form-check-input"
+            formControlName="remember_me" />
+          <label class="form-check-label" for="remember">Remember me</label>
+        </div>
+        <a href="/auth/forgot-password" class="forgot-password">Forgot Password?</a>
+      </div>
+
+      <!-- Submit Button -->
+      <button
+        type="submit"
+        class="btn btn-primary btn-block"
+        [disabled]="loginForm.invalid || isLoading">
+        <span *ngIf="!isLoading">Sign In</span>
+        <span *ngIf="isLoading">
+          <i class="spinner"></i> Signing In...
+        </span>
+      </button>
+    </form>
+
+    <!-- Divider -->
+    <div class="divider">
+      <span>OR</span>
+    </div>
+
+    <!-- Google OAuth Button -->
+    <button type="button" class="btn btn-outline-secondary btn-block google-btn">
+      <i class="icon-google"></i> Sign In with Google
+    </button>
+
+    <!-- Sign Up Link -->
+    <p class="signup-link">
+      Don't have an account? <a routerLink="/auth/signup">Sign Up Now</a>
+    </p>
+  </div>
+</div>

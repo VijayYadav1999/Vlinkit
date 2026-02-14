@@ -1,0 +1,223 @@
+<div class="tracking-container">
+  <!-- Header -->
+  <div class="tracking-header">
+    <div class="header-top">
+      <h1>Order Tracking</h1>
+      <div class="header-actions">
+        <button (click)="toggleMapView()" class="btn-icon" title="Toggle Map">
+          🗺️
+        </button>
+        <button (click)="toggleTimelineView()" class="btn-icon" title="Toggle Timeline">
+          📋
+        </button>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar" *ngIf="order">
+      <div class="order-id">Order: {{ order.orderId }}</div>
+      <div class="order-status" [ngClass]="'status-' + order.status">
+        {{ order.status.split('_').join(' ') }}
+      </div>
+      <div class="eta-info">
+        <span class="eta-time">{{ getRemainingTime() }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Alert -->
+  <div *ngIf="error" class="alert alert-danger">
+    {{ error }}
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading order details...</p>
+  </div>
+
+  <!-- Main Content (when loaded) -->
+  <div *ngIf="!isLoading && order" class="tracking-content">
+    <!-- Map Section -->
+    <div class="map-section" *ngIf="showMap" [@fadeInOut]>
+      <div class="map-container">
+        <!-- Mock Google Maps Placeholder -->
+        <div class="map-placeholder">
+          <div class="map-info">
+            <span class="driver-marker">🚗</span>
+            <span class="user-marker">📍</span>
+            <span class="map-text">Driver Location Map</span>
+            <div class="map-meta">
+              Distance: {{ distanceKm | number: '1.1-1' }} km | Speed:
+              {{ orderLocation?.speed | number: '1.0-0' }} km/h
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Driver & ETA Card -->
+      <div class="driver-card">
+        <div class="driver-header">
+          <div class="driver-avatar">
+            👤
+          </div>
+          <div class="driver-info">
+            <h3>{{ orderLocation?.driverName || 'Driver' }}</h3>
+            <div class="driver-rating">
+              ⭐ {{ orderLocation?.driverRating | number: '1.1-1' }}
+            </div>
+          </div>
+          <div class="driver-actions">
+            <button
+              class="btn-action"
+              (click)="callDriver()"
+              [disabled]="!canShowPhone()"
+              title="Call Driver"
+            >
+              ☎️
+            </button>
+            <button
+              class="btn-action"
+              (click)="togglePhoneVisibility()"
+              [disabled]="!canShowPhone()"
+              title="Show Phone"
+            >
+              {{ driverPhoneVisible ? '👁' : '👁‍🗨' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Phone Number -->
+        <div class="driver-phone" *ngIf="canShowPhone()">
+          <span *ngIf="!driverPhoneVisible" class="phone-masked">
+            {{ driverPhone }}
+          </span>
+          <span *ngIf="driverPhoneVisible" class="phone-visible">
+            +91-98765-43210
+          </span>
+        </div>
+
+        <!-- ETA -->
+        <div class="eta-card">
+          <div class="eta-label">Estimated Delivery</div>
+          <div class="eta-time-large">
+            {{ estimatedDeliveryTime | date: 'HH:mm' }}
+          </div>
+          <div class="eta-date">
+            {{ estimatedDeliveryTime | date: 'MMM d, yyyy' }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline Section -->
+    <div class="timeline-section" *ngIf="showTimeline" [@fadeInOut]>
+      <h2>Delivery Timeline</h2>
+      <div class="timeline">
+        <div
+          *ngFor="let status of deliveryStatuses"
+          class="timeline-item"
+          [ngClass]="'status-' + status.status"
+        >
+          <div class="timeline-marker" [style.color]="getStatusColor(status.status)">
+            {{ getStatusIcon(status.status) }}
+          </div>
+          <div class="timeline-content">
+            <h4>{{ status.status.split('_').join(' ') }}</h4>
+            <p>{{ status.description }}</p>
+            <span class="timeline-time">{{ formatTime(status.timestamp) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Details Sidebar -->
+    <div class="order-details-sidebar">
+      <!-- Order Summary -->
+      <div class="details-card">
+        <h3>Order Details</h3>
+        <div class="detail-row">
+          <span class="detail-label">Order ID</span>
+          <span class="detail-value">{{ order.orderId }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Total Amount</span>
+          <span class="detail-value">₹{{ order.totalAmount | number: '1.2-2' }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Payment</span>
+          <span class="detail-value">{{ order.paymentMethod }}</span>
+        </div>
+      </div>
+
+      <!-- Delivery Address -->
+      <div class="details-card">
+        <h3>Delivery Address</h3>
+        <div class="address-text">{{ order.deliveryAddress }}</div>
+        <div class="special-instructions" *ngIf="order.specialInstructions">
+          <strong>Special Instructions:</strong>
+          <p>{{ order.specialInstructions }}</p>
+        </div>
+      </div>
+
+      <!-- Items -->
+      <div class="details-card">
+        <h3>Items ({{ order.items.length }})</h3>
+        <div class="items-list">
+          <div *ngFor="let item of order.items" class="item">
+            📦 {{ item }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Support & Actions -->
+      <div class="action-buttons">
+        <button
+          class="btn btn-primary btn-block"
+          (click)="contactSupport()"
+          [disabled]="!trackingActive"
+        >
+          📞 Support
+        </button>
+        <button
+          class="btn btn-secondary btn-block"
+          (click)="shareOrder()"
+          [disabled]="!trackingActive"
+        >
+          📤 Share
+        </button>
+        <button
+          class="btn btn-danger btn-block"
+          (click)="cancelOrder()"
+          *ngIf="order.status !== 'DELIVERED' && order.status !== 'CANCELLED'"
+          [disabled]="!trackingActive || order.status === 'DELIVERED'"
+        >
+          ❌ Cancel
+        </button>
+      </div>
+
+      <!-- Connection Status -->
+      <div class="connection-status">
+        <span
+          class="status-indicator"
+          [ngClass]="webSocketConnected ? 'connected' : 'disconnected'"
+        ></span>
+        <span>{{ webSocketConnected ? 'Live Tracking' : 'Using Fallback' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delivery Completed State -->
+  <div *ngIf="isOrderDelivered() && !isLoading" class="delivery-completed">
+    <div class="completed-icon">✓✓</div>
+    <h2>Order Delivered!</h2>
+    <p>Your order has been successfully delivered</p>
+    <div class="delivery-time">
+      Delivered at {{ order?.estimatedDeliveryTime | date: 'short' }}
+    </div>
+    <div class="action-buttons">
+      <button class="btn btn-primary btn-block">📝 Rate Delivery</button>
+      <button class="btn btn-secondary btn-block">📧 Download Invoice</button>
+    </div>
+  </div>
+</div>

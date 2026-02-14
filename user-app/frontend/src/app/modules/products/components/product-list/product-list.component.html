@@ -1,0 +1,190 @@
+<!-- Product List Component Template -->
+<div class="product-list-container">
+  <!-- Header -->
+  <div class="product-header">
+    <h1>Products</h1>
+    <p class="subtitle">Browse our collection of fresh products</p>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="alert alert-danger">
+    {{ error }}
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="filter-row">
+      <!-- Search Filter -->
+      <div class="filter-group">
+        <label>Search Products</label>
+        <div class="search-box">
+          <input
+            type="text"
+            placeholder="Search by name or description..."
+            [formControl]="filterForm.get('search')"
+            class="form-control"
+          />
+          <span class="search-icon">🔍</span>
+        </div>
+      </div>
+
+      <!-- Category Filter -->
+      <div class="filter-group">
+        <label>Category</label>
+        <select [formControl]="filterForm.get('category')" class="form-control">
+          <option value="">All Categories</option>
+          <option *ngFor="let category of categories" [value]="category">
+            {{ category }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Sorting -->
+      <div class="filter-group">
+        <label>Sort By</label>
+        <select
+          (change)="changeSortBy($event.target.value)"
+          [value]="sortBy"
+          class="form-control"
+        >
+          <option *ngFor="let option of sortOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Price Filter -->
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>Price Range</label>
+        <div class="price-range">
+          <input
+            type="range"
+            min="0"
+            max="10000"
+            [formControl]="filterForm.get('priceMin')"
+            class="price-slider"
+          />
+          <span>₹{{ filterForm.get('priceMin')?.value }} - ₹{{ filterForm.get('priceMax')?.value }}</span>
+        </div>
+      </div>
+
+      <!-- In Stock Filter -->
+      <div class="filter-group">
+        <label>
+          <input
+            type="checkbox"
+            [formControl]="filterForm.get('inStockOnly')"
+          />
+          In Stock Only
+        </label>
+      </div>
+
+      <!-- Reset Filters -->
+      <div class="filter-group">
+        <button (click)="resetFilters()" class="btn btn-secondary">
+          Reset Filters
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Products Grid -->
+  <div class="products-section">
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="loading-spinner">
+      <div class="spinner"></div>
+      <p>Loading products...</p>
+    </div>
+
+    <!-- No Products Found -->
+    <div *ngIf="!isLoading && filteredProducts.length === 0" class="no-products">
+      <p>No products found matching your criteria</p>
+      <button (click)="resetFilters()" class="btn btn-primary">
+        Clear Filters
+      </button>
+    </div>
+
+    <!-- Products Grid -->
+    <div *ngIf="!isLoading && filteredProducts.length > 0" class="products-grid">
+      <div
+        *ngFor="let product of getPaginatedProducts()"
+        class="product-card"
+        [class.out-of-stock]="!product.in_stock"
+      >
+        <div class="product-image">
+          <img
+            [src]="product.image_url"
+            [alt]="product.name"
+            class="img-fluid"
+          />
+          <span *ngIf="!product.in_stock" class="out-of-stock-badge">
+            Out of Stock
+          </span>
+          <div class="delivery-badge">
+            ⏱️ {{ product.delivery_time_minutes }}min
+          </div>
+        </div>
+
+        <div class="product-info">
+          <h5 class="product-name">{{ product.name }}</h5>
+          <p class="product-description">{{ product.description }}</p>
+
+          <div class="product-rating">
+            {{ getRatingDisplay(product.rating) }}
+          </div>
+
+          <div class="product-footer">
+            <div class="product-price">
+              <span class="price">₹{{ product.price }}</span>
+            </div>
+
+            <button
+              class="btn btn-add-to-cart"
+              [disabled]="!product.in_stock"
+              (click)="addToCart(product)"
+            >
+              {{ !product.in_stock ? 'Unavailable' : 'Add to Cart' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="!isLoading && filteredProducts.length > 0" class="pagination">
+    <button
+      *ngIf="currentPage > 1"
+      (click)="goToPage(currentPage - 1)"
+      class="btn btn-sm"
+    >
+      ← Previous
+    </button>
+
+    <span class="page-info">
+      Page {{ currentPage }} of {{ getTotalPages() }}
+    </span>
+
+    <button
+      *ngIf="currentPage < getTotalPages()"
+      (click)="goToPage(currentPage + 1)"
+      class="btn btn-sm"
+    >
+      Next →
+    </button>
+  </div>
+
+  <!-- Results Count -->
+  <div *ngIf="!isLoading" class="results-count">
+    Showing {{ (currentPage - 1) * pageSize + 1 }} -
+    {{ mathMin(currentPage * pageSize, filteredProducts.length) }} of
+    {{ filteredProducts.length }} products
+  </div>
+
+  <!-- Cart Toast -->
+  <div *ngIf="addedToCartMessage" class="cart-toast">
+    ✅ {{ addedToCartMessage }}
+  </div>
+</div>

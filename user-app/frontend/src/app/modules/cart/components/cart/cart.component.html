@@ -1,0 +1,194 @@
+<div class="cart-container">
+  <!-- Header -->
+  <div class="cart-header">
+    <h1>Shopping Cart</h1>
+    <p class="cart-subtitle">{{ itemsCount }} item(s) in cart</p>
+  </div>
+
+  <!-- Error Alert -->
+  <div *ngIf="error" class="alert alert-danger">
+    {{ error }}
+  </div>
+
+  <!-- Empty Cart Message -->
+  <div *ngIf="cartItems.length === 0" class="empty-cart">
+    <div class="empty-cart-icon">🛒</div>
+    <h2>Your cart is empty</h2>
+    <p>Add items from our store to get started</p>
+    <button class="btn btn-primary btn-lg" (click)="continueShopping()">
+      Continue Shopping
+    </button>
+  </div>
+
+  <!-- Cart Content (when not empty) -->
+  <div *ngIf="cartItems.length > 0" class="cart-content">
+    <div class="cart-main">
+      <!-- Cart Items -->
+      <div class="cart-items-section">
+        <h2>Order Summary</h2>
+        <div class="cart-items-list">
+          <div
+            *ngFor="let item of cartItems"
+            class="cart-item"
+            [class.out-of-stock]="!item.inStock"
+          >
+            <!-- Item Image -->
+            <div class="item-image">
+              <img
+                [src]="item.image_url"
+                [alt]="item.name"
+                onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2214%22%3EProduct Image%3C/text%3E%3C/svg%3E'"
+              />
+            </div>
+
+            <!-- Item Details -->
+            <div class="item-details">
+              <h3 class="item-name">{{ item.name }}</h3>
+              <p class="item-description">{{ item.description }}</p>
+              <span class="item-category">{{ item.category }}</span>
+            </div>
+
+            <!-- Quantity Controls -->
+            <div class="quantity-control">
+              <button
+                class="btn-quantity"
+                (click)="decrementQuantity(item.productId)"
+                [disabled]="item.quantity <= 1"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                class="quantity-input"
+                [(ngModel)]="item.quantity"
+                (change)="updateQuantity(item.productId, item.quantity)"
+                [max]="item.maxQuantity"
+                min="1"
+              />
+              <button
+                class="btn-quantity"
+                (click)="incrementQuantity(item.productId)"
+                [disabled]="item.quantity >= item.maxQuantity"
+              >
+                +
+              </button>
+            </div>
+
+            <!-- Price -->
+            <div class="item-price">
+              <div class="unit-price">₹{{ item.price }}</div>
+              <div class="total-price">₹{{ getItemSubtotal(item) }}</div>
+            </div>
+
+            <!-- Remove Button -->
+            <button
+              class="btn-remove"
+              (click)="removeItem(item.productId)"
+              title="Remove item"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coupon Section -->
+      <div class="coupon-section">
+        <h3>Have a coupon code?</h3>
+        <div class="coupon-input-group" *ngIf="!appliedCoupon">
+          <input
+            type="text"
+            placeholder="Enter coupon code"
+            class="form-control"
+            [formControl]="couponForm.get('coupon')"
+          />
+          <button
+            class="btn btn-secondary"
+            (click)="applyCoupon()"
+            [disabled]="!couponCode"
+          >
+            Apply
+          </button>
+        </div>
+        <div class="coupon-applied" *ngIf="appliedCoupon">
+          <span class="coupon-badge">{{ appliedCoupon }}</span>
+          <button class="btn-remove-coupon" (click)="removeCoupon()">
+            Remove
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bill Summary -->
+    <div class="bill-summary">
+      <h2>Bill Details</h2>
+
+      <div class="summary-row">
+        <span class="summary-label">Subtotal</span>
+        <span class="summary-value">₹{{ subtotal | number: '1.2-2' }}</span>
+      </div>
+
+      <div class="summary-row">
+        <span class="summary-label">Tax ({{ (taxRate * 100) | number: '1.0-0' }}%)</span>
+        <span class="summary-value">₹{{ tax | number: '1.2-2' }}</span>
+      </div>
+
+      <div class="summary-row">
+        <span class="summary-label">Delivery Fee</span>
+        <span class="summary-value">₹{{ deliveryFee | number: '1.2-2' }}</span>
+      </div>
+
+      <div class="summary-row discount" *ngIf="discountAmount > 0">
+        <span class="summary-label">Discount</span>
+        <span class="summary-value">-₹{{ discountAmount | number: '1.2-2' }}</span>
+      </div>
+
+      <div class="summary-divider"></div>
+
+      <div class="summary-row total">
+        <span class="summary-label">Total Amount</span>
+        <span class="summary-value">₹{{ totalAmount | number: '1.2-2' }}</span>
+      </div>
+
+      <!-- Delivery Info -->
+      <div class="delivery-info">
+        <span class="delivery-icon">📦</span>
+        <span class="delivery-text">Estimated Delivery: {{ getDeliveryDateString() }}</span>
+      </div>
+
+      <!-- Actions -->
+      <div class="cart-actions">
+        <button
+          class="btn btn-primary btn-block"
+          (click)="proceedToCheckout()"
+          [disabled]="cartItems.length === 0 || isLoading"
+        >
+          Proceed to Checkout
+        </button>
+        <button
+          class="btn btn-secondary btn-block"
+          (click)="continueShopping()"
+        >
+          Continue Shopping
+        </button>
+      </div>
+
+      <!-- Security Info -->
+      <div class="security-info">
+        <span class="lock-icon">🔒</span>
+        <span>Your payment information is secure</span>
+      </div>
+
+      <!-- Clear Cart Link -->
+      <div class="clear-cart-section">
+        <button
+          class="btn-text"
+          (click)="clearCart()"
+          *ngIf="cartItems.length > 0"
+        >
+          Clear Cart
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

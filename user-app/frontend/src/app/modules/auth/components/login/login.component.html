@@ -1,0 +1,123 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <span class="login-logo">🚀</span>
+      <h1>Welcome to Vlinkit</h1>
+      <p *ngIf="!isSignupMode">Sign in to continue to your account</p>
+      <p *ngIf="isSignupMode">Create a new account</p>
+    </div>
+
+    <div class="alert alert-error" *ngIf="error">
+      {{ error }}
+    </div>
+
+    <!-- LOGIN FORM -->
+    <form *ngIf="!isSignupMode" [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input
+          type="email"
+          id="email"
+          formControlName="email"
+          placeholder="you@example.com"
+          [class.invalid]="emailControl?.invalid && emailControl?.touched">
+        <span class="error-text" *ngIf="emailControl?.touched && emailControl?.invalid">
+          {{ getEmailError() }}
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="password-input-wrapper">
+          <input
+            [type]="showPassword ? 'text' : 'password'"
+            id="password"
+            formControlName="password"
+            placeholder="Enter your password"
+            [class.invalid]="passwordControl?.invalid && passwordControl?.touched">
+          <button
+            type="button"
+            class="toggle-password"
+            (click)="togglePasswordVisibility()">
+            {{ showPassword ? '🙈' : '👁️' }}
+          </button>
+        </div>
+        <span class="error-text" *ngIf="passwordControl?.touched && passwordControl?.invalid">
+          {{ getPasswordError() }}
+        </span>
+      </div>
+
+      <div class="form-options">
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="remember_me">
+          <span>Remember me</span>
+        </label>
+        <a href="#" class="forgot-link">Forgot password?</a>
+      </div>
+
+      <button
+        type="submit"
+        class="btn-login"
+        [disabled]="isLoading">
+        <span *ngIf="!isLoading">Sign In</span>
+        <span *ngIf="isLoading">Signing In...</span>
+      </button>
+
+      <p class="signup-link">
+        Don't have an account? <a (click)="toggleMode()" class="toggle-link">Sign Up</a>
+      </p>
+    </form>
+
+    <!-- SIGNUP FORM -->
+    <form *ngIf="isSignupMode" [formGroup]="signupForm" (ngSubmit)="onSignup()" class="login-form">
+      <div class="form-row">
+        <div class="form-group half">
+          <label>First Name</label>
+          <input type="text" formControlName="firstName" placeholder="John">
+        </div>
+        <div class="form-group half">
+          <label>Last Name</label>
+          <input type="text" formControlName="lastName" placeholder="Doe">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" formControlName="email" placeholder="you@example.com">
+      </div>
+
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" formControlName="phone" placeholder="9876543210">
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <div class="password-input-wrapper">
+          <input
+            [type]="showSignupPassword ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="Min 8 characters">
+          <button
+            type="button"
+            class="toggle-password"
+            (click)="toggleSignupPasswordVisibility()">
+            {{ showSignupPassword ? '🙈' : '👁️' }}
+          </button>
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        class="btn-login"
+        [disabled]="isLoading">
+        <span *ngIf="!isLoading">Create Account</span>
+        <span *ngIf="isLoading">Creating Account...</span>
+      </button>
+
+      <p class="signup-link">
+        Already have an account? <a (click)="toggleMode()" class="toggle-link">Sign In</a>
+      </p>
+    </form>
+  </div>
+</div>
