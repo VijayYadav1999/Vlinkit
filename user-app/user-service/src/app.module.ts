@@ -24,6 +24,7 @@ import { AppController } from './app.controller';
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: config.get('DATABASE_SYNCHRONIZE', 'true') === 'true',
         logging: config.get('DATABASE_LOGGING', 'false') === 'true',
+        ssl: config.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
         extra: {
           family: 4,
         },
