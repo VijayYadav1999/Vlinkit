@@ -3,11 +3,15 @@ import {
 } from '@nestjs/common';
 import { DriverOrdersService } from './orders.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { KafkaService } from '../kafka/kafka.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('orders')
 export class DriverOrdersController {
-  constructor(private ordersService: DriverOrdersService) {}
+  constructor(
+    private ordersService: DriverOrdersService,
+    private kafkaService: KafkaService,
+  ) {}
 
   /** Get all pending order offers for this driver */
   @Get('offers')
@@ -17,8 +21,11 @@ export class DriverOrdersController {
 
   /** Accept an order offer */
   @Post('offers/:orderId/accept')
-  acceptOrder(@Request() req, @Param('orderId') orderId: string) {
-    return this.ordersService.acceptOrder(req.user.id, orderId);
+  async acceptOrder(@Request() req, @Param('orderId') orderId: string) {
+    const delivery = await this.ordersService.acceptOrder(req.user.id, orderId);
+    // Emit Kafka event so order-service updates MongoDB
+    await this.kafkaService.emitOrderAssigned(orderId, req.user.id);
+    return delivery;
   }
 
   /** Reject an order offer */
@@ -36,10 +43,13 @@ export class DriverOrdersController {
 
   /** Update delivery status */
   @Put('active/status')
-  updateDeliveryStatus(
+  async updateDeliveryStatus(
     @Request() req,
     @Body() dto: { status: 'picked_up' | 'on_the_way' | 'arrived' | 'delivered' },
   ) {
-    return this.ordersService.updateDeliveryStatus(req.user.id, dto.status);
+    const delivery = await this.ordersService.updateDeliveryStatus(req.user.id, dto.status);
+    // Emit Kafka event so order-service updates MongoDB
+    await this.kafkaService.emitOrderStatusUpdate(delivery.orderId, req.user.id, dto.status);
+    return delivery;
   }
 }

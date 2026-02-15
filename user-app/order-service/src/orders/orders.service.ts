@@ -86,11 +86,26 @@ export class OrdersService {
     await order.save();
     console.log('✅ [OrderService] Order saved to MongoDB:', order._id);
 
-    // Clear cart after order creation
+    // Clear cart after order creation (clear Redis cart if items came from there)
     await this.cartService.clearCart(userId);
 
-    // IMMEDIATELY emit Kafka event to notify drivers about the new order
-    console.log('📤 [OrderService] Emitting Kafka event for order:', order._id);
+    // Note: Kafka event will be emitted after payment confirmation
+    // to avoid duplicate notifications to drivers
+    console.log('📋 [OrderService] Order created, waiting for payment confirmation');
+
+    return order;
+  }
+
+  async confirmPayment(orderId: string, paymentId: string) {
+    const order = await this.orderModel.findById(orderId);
+    if (!order) throw new NotFoundException('Order not found');
+
+    order.status = 'payment_completed';
+    order.payment_id = paymentId;
+    await order.save();
+
+    // Emit order.created to Kafka to notify drivers (only once, after payment)
+    console.log('📤 [OrderService] Payment confirmed, emitting order.created for drivers');
     try {
       await this.kafkaProducer.emit('order.created', {
         orderId: order._id.toString(),
@@ -111,42 +126,10 @@ export class OrdersService {
         deliveryFee: order.delivery_fee || 0,
         timestamp: new Date().toISOString(),
       });
-      console.log('✅ [OrderService] Kafka event emitted successfully');
+      console.log('✅ [OrderService] order.created emitted to Kafka');
     } catch (error) {
-      console.error('❌ [OrderService] Error emitting Kafka event:', error);
+      console.error('❌ [OrderService] Failed to emit order.created:', error);
     }
-
-    return order;
-  }
-
-  async confirmPayment(orderId: string, paymentId: string) {
-    const order = await this.orderModel.findById(orderId);
-    if (!order) throw new NotFoundException('Order not found');
-
-    order.status = 'payment_completed';
-    order.payment_id = paymentId;
-    await order.save();
-
-    // Emit Kafka event to notify drivers
-    await this.kafkaProducer.emit('order.created', {
-      orderId: order._id.toString(),
-      orderNumber: order.order_number,
-      userId: order.user_id,
-      items: order.items,
-      deliveryAddress: {
-        address: `${order.delivery_address.address_line_1}, ${order.delivery_address.city}`,
-        latitude: order.delivery_address.latitude,
-        longitude: order.delivery_address.longitude,
-      },
-      pickupAddress: {
-        address: order.warehouse_location.address,
-        latitude: order.warehouse_location.latitude,
-        longitude: order.warehouse_location.longitude,
-      },
-      totalAmount: order.total_amount,
-      deliveryFee: order.delivery_fee || 0,
-      timestamp: new Date().toISOString(),
-    });
 
     return order;
   }
