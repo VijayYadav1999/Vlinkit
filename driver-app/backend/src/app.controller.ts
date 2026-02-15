@@ -8,7 +8,7 @@ export class AppController {
       service: 'Vlinkit Driver Service',
       status: 'running',
       version: '1.0.0',
-      endpoints: ['/api/driver/auth', '/api/driver/drivers', '/api/driver/orders', '/api/driver/location'],
+      endpoints: ['/api/auth', '/api/profile', '/api/orders', '/api/location'],
     };
   }
 }
