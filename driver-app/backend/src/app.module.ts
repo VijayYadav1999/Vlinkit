@@ -39,6 +39,8 @@ import { AppController } from './app.controller';
           database: config.get('DATABASE_NAME', 'vlinkit_db'),
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
           synchronize: config.get('DATABASE_SYNCHRONIZE', 'true') === 'true',
+          ssl: config.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
+          extra: { family: 4 },
         };
       },
     }),
