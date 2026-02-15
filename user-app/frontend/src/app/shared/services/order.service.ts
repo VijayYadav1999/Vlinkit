@@ -12,6 +12,7 @@ export interface CreateOrderDto {
     latitude: number;
     longitude: number;
   };
+  items?: { productId: string; name: string; price: number; quantity: number; image_url?: string }[];
   special_instructions?: string;
 }
 

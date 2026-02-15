@@ -19,15 +19,39 @@ export class OrdersService {
       address_line_1: string; city: string; state: string;
       postal_code: string; latitude: number; longitude: number;
     };
+    items?: { productId: string; name: string; price: number; quantity: number; image_url?: string }[];
     special_instructions?: string;
   }) {
     console.log('📦 [OrderService] Creating order for user:', userId);
-    const cart = await this.cartService.getCart(userId);
-    if (cart.items.length === 0) {
-      throw new NotFoundException('Cart is empty');
-    }
 
-    console.log('📦 [OrderService] Cart contains', cart.items.length, 'items');
+    // Use items from request body if provided, otherwise fall back to Redis cart
+    let items: any[];
+    let subtotal: number;
+    let tax: number;
+    let delivery_fee: number;
+    let total: number;
+
+    if (dto.items && dto.items.length > 0) {
+      // Items sent directly from frontend
+      items = dto.items;
+      subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      tax = Math.round(subtotal * 0.05 * 100) / 100;
+      delivery_fee = 50;
+      total = Math.round((subtotal + tax + delivery_fee) * 100) / 100;
+      console.log('📦 [OrderService] Using', items.length, 'items from request body');
+    } else {
+      // Fall back to Redis cart
+      const cart = await this.cartService.getCart(userId);
+      if (cart.items.length === 0) {
+        throw new NotFoundException('Cart is empty');
+      }
+      items = cart.items;
+      subtotal = cart.subtotal;
+      tax = cart.tax;
+      delivery_fee = cart.delivery_fee;
+      total = cart.total;
+      console.log('📦 [OrderService] Using', items.length, 'items from Redis cart');
+    }
 
     const orderNumber = `VLK-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${uuidv4().slice(0, 4).toUpperCase()}`;
 
@@ -41,7 +65,7 @@ export class OrdersService {
     const order = new this.orderModel({
       order_number: orderNumber,
       user_id: userId,
-      items: cart.items.map(item => ({
+      items: items.map(item => ({
         product_id: item.productId,
         name: item.name,
         price: item.price,
@@ -51,10 +75,10 @@ export class OrdersService {
       delivery_address: dto.delivery_address,
       warehouse_location: warehouseLocation,
       status: 'placed',
-      subtotal: cart.subtotal,
-      tax: cart.tax,
-      delivery_fee: cart.delivery_fee,
-      total_amount: cart.total,
+      subtotal,
+      tax,
+      delivery_fee,
+      total_amount: total,
       special_instructions: dto.special_instructions,
       estimated_delivery_time: new Date(Date.now() + 30 * 60 * 1000), // 30 min
     });

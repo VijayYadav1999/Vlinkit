@@ -396,7 +396,8 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     this.isProcessing = true;
     this.error = '';
 
-    // Prepare order data
+    // Prepare order data - include cart items for backend
+    const cart = this.cartService.getCart();
     const orderData = {
       delivery_address: {
         address_line_1: this.selectedAddress?.street || '',
@@ -406,6 +407,13 @@ export class CheckoutComponent implements OnInit, OnDestroy {
         latitude: 28.6139, // Default coordinates for demo (Delhi)
         longitude: 77.2090,
       },
+      items: cart.items.map(item => ({
+        productId: item.productId,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image_url: item.image_url || '',
+      })),
       special_instructions: this.addressForm.get('landmark')?.value,
     };
 

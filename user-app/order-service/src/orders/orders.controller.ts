@@ -12,6 +12,7 @@ export class OrdersController {
       address_line_1: string; city: string; state: string;
       postal_code: string; latitude: number; longitude: number;
     };
+    items?: { productId: string; name: string; price: number; quantity: number; image_url?: string }[];
     special_instructions?: string;
   }) {
     // For testing: use a mock user ID if not provided
