@@ -14,21 +14,30 @@ import { AppController } from './app.controller';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get('DATABASE_HOST', 'localhost'),
-        port: config.get<number>('DATABASE_PORT', 5432),
-        username: config.get('DATABASE_USER', 'vlinkit_user'),
-        password: config.get('DATABASE_PASSWORD', 'vlinkit_password_dev'),
-        database: config.get('DATABASE_NAME', 'vlinkit_db'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: config.get('DATABASE_SYNCHRONIZE', 'true') === 'true',
-        logging: config.get('DATABASE_LOGGING', 'false') === 'true',
-        ssl: config.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
-        extra: {
-          family: 4,
-        },
-      }),
+      useFactory: (config: ConfigService) => {
+        const dbUrl = config.get('DATABASE_URL');
+        if (dbUrl) {
+          return {
+            type: 'postgres',
+            url: dbUrl,
+            entities: [__dirname + '/**/*.entity{.ts,.js}'],
+            synchronize: config.get('DATABASE_SYNCHRONIZE', 'true') === 'true',
+            logging: config.get('DATABASE_LOGGING', 'false') === 'true',
+            ssl: { rejectUnauthorized: false },
+          };
+        }
+        return {
+          type: 'postgres',
+          host: config.get('DATABASE_HOST', 'localhost'),
+          port: config.get<number>('DATABASE_PORT', 5432),
+          username: config.get('DATABASE_USER', 'vlinkit_user'),
+          password: config.get('DATABASE_PASSWORD', 'vlinkit_password_dev'),
+          database: config.get('DATABASE_NAME', 'vlinkit_db'),
+          entities: [__dirname + '/**/*.entity{.ts,.js}'],
+          synchronize: config.get('DATABASE_SYNCHRONIZE', 'true') === 'true',
+          logging: config.get('DATABASE_LOGGING', 'false') === 'true',
+        };
+      },
     }),
     AuthModule,
     UsersModule,
