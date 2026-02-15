@@ -1,7 +1,7 @@
 export const environment = {
   production: false,
-  userServiceUrl: '/api/user',
-  orderServiceUrl: '/api',
-  driverServiceUrl: '/api/driver',
+  userServiceUrl: 'http://localhost:3001/api',
+  orderServiceUrl: 'http://localhost:3000/api',
+  driverServiceUrl: 'http://localhost:3002/api/driver',
   wsUrl: 'ws://localhost:3100',
 };
